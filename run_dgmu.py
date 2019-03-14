@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from dgmu.models import gmu, deep_gmu
+from dgmu.models import deep_gmu
 from dgmu.utils import datasets, utilities
 
 # Define flags
@@ -45,3 +45,11 @@ if __name__ == "__main__":
         X_train = load_custom(FLAGS.test_data_dir, delimiter=',')
 
     print("So far so good!")
+
+    #Create the dgmu object
+    #dgmu_model = dgmu.dGMU(
+    #name=FLAGS.name, ...
+    #)
+
+    #Fit the model
+    #dgmu.fit(X_train, y_train, X_test, y_test)
