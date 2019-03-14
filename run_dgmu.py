@@ -26,19 +26,20 @@ if __name__ == "__main__":
 
     if FLAGS.dataset == 'default':
 
-        data = datasets.load_cnv_rna_dcg_dataset(FLAGS.default_data_dir, mode='supervised', one_hot=True)
-        print(data.shape)
+        X_train, X_test, y_train, y_test = datasets.load_cnv_rna_dataset(FLAGS.default_data_dir, mode='supervised', one_hot=True)
+        print(X_train.shape)
+        print(y_train.shape)
 
     if FLAGS.dataset == 'custom':
 
-        def load_from_np(custom_data_dir):
+        def load_custom(custom_data_dir, delimiter = ','):
             if dataset_path != '':
-                return np.loadtxt(custom_data_dir)
+                return np.loadtxt(custom_data_dir, delimiter=',')
             else:
                 return None
 
-        X_train = load_from_np(FLAGS.train_dataset)
-        X_val = load_from_np(FLAGS.valid_dataset)
-        X_train = load_from_np(FLAGS.test_dataset)
+        X_train = load_custom(FLAGS.train_data_dir, delimiter=',')
+        X_val = load_custom(FLAGS.valid_data_dir, delimiter=',')
+        X_train = load_custom(FLAGS.test_data_dir, delimiter=',')
 
     print("So far so good!")
