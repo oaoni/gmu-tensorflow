@@ -29,6 +29,8 @@ if __name__ == "__main__":
         X_train, X_test, y_train, y_test = datasets.load_cnv_rna_dataset(FLAGS.default_data_dir, mode='supervised', one_hot=True)
         print(X_train.shape)
         print(y_train.shape)
+        print(X_test.shape)
+        print(y_test.shape)
 
     if FLAGS.dataset == 'custom':
 
