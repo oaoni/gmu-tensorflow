@@ -2,6 +2,32 @@
 
 import tensorflow as tf
 
+class Trainer(object):
+    """Tensorflow optimizers wrapper"""
+
+    def __init__(self, optimizer, lr):
+        """Constructor
+
+        :param optimizer: string, ['adam']
+        :param lr: learning rate (float, default = 0.001)
+        """
+
+        assert optimizer in ['adam']
+
+        if optimizer == 'adam':
+            self.optimizer_ = tf.train.AdamOptimizer(lr)
+
+        def compile(self, loss, name_scope = 'train'):
+            """"Compile the optimizer
+
+            :param loss: Tensor containing value to minimize
+            :param name_scope: string, Name of scope for the optimizer grapher ops
+            """
+
+            with tf.name_scope(name_scope):
+                return self.optimizer_.minimize(loss)
+
+
 class Loss(object):
     """Collection of cost functions"""
 
