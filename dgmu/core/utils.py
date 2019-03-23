@@ -53,7 +53,12 @@ class Borg:
         self.__dict__ = self._shared_state
 
 class Config(Borg):
-    """Singleton class"""
+    """Model directory singleton class
+
+    :param models_dir: string, name of the folder for stored models, relative to self.root_dir
+    :param data_dir: string, name of the data folder, relative to self.root_dir
+    :param logs_dir: string, name of the logs folder, relative to self.root_dir
+    """
     def __init__(self, models_dir='stored_models/', data_dir='sequence_data/', logs_dir='logs/'):
         Borg.__init__(self)
 
@@ -65,6 +70,7 @@ class Config(Borg):
         self._mkdir(self.logs_dir)
 
     #def __str__(self): return self.models_dir
+
 
     def _mkdir(self, path):
         """Create required model directories
@@ -78,3 +84,49 @@ class Config(Borg):
                 pass
             else:
                 raise
+
+    def _run_identifier(self, reference_dir):
+        # Retrieve run identifier
+        run_id = 0
+        for e in os.listdir(reference_dir):
+            if e[:3] == 'run':
+                r = int(e[3:])
+                if r > run_id:
+                    run_id = r
+
+        run_id += 1
+
+        return run_id
+
+def init_tf_ops(sess):
+    #Adapted from yadlt/utils/tf_utils.py
+    """Initialize TensorFlow operations.
+    This function initialize the following tensorflow ops:
+        * init variables ops
+        * summary ops
+        * create model saver
+    Parameters
+    ----------
+    sess : object
+        Tensorflow `Session` object
+    Returns
+    -------
+    tuple : (summary_merged, summary_writer)
+        * tf merged summaries object
+        * tf summary writer object
+        * tf saver object
+    """
+    summary_merged = tf.summary.merge_all()
+    init_op = tf.global_variables_initializer()
+    saver = tf.train.Saver()
+
+    sess.run(init_op)
+
+    run_id = Config()._run_identifier(Config().logs_dir)
+
+    run_dir = os.path.join(Config().logs_dir, 'run' + str(run_id))
+    print('Tensorboard logs dir for this run is %s' % (run_dir))
+
+    summary_writer = tf.summary.FileWriter(run_dir, sess.graph)
+
+    return (summary_merged, summary_writer, saver)
