@@ -88,7 +88,7 @@ class GMU(SupervisedModel):
 
         return h
 
-    def _train_model(self, trainX, trainY, valX, valY):
+    def _train_model(self, trainX, trainY, valX, valY, summary = True):
         """Train the model
 
         :param trainX: Training data, array_like, shape (n_samples, n_features)
@@ -118,15 +118,16 @@ class GMU(SupervisedModel):
                 #Compute cost
                 cost = self.tf_session.run(self.cost, trainFeed)
 
-                #Compute classification agreement
-                #train_agreement = self.tf_session.run(self.accuracy, feed_dict = trainFeed)
-                #test_agreement = self.tf_session.run(self.accuracy, feed_dict = valFeed)
+                #Compute classification scores and record summaries
+                s_train, trainScore = self.tf_session.run([self.tf_merged_summaries, self.accuracy], feed_dict = trainFeed)
+                s_test, testScore = self.tf_session.run([self.tf_merged_summaries, self.accuracy], feed_dict = valFeed)
 
-                #print('epoch : ', epoch, 'cost : ', cost, 'train acc. :', test_agreement)
+                #print('epoch : ', epoch, 'cost : ', cost, 'train acc. :', trainScore, 'test acc. :', testScore)
 
                 #Add summary
-                s = self.tf_session.run(self.tf_merged_summaries, feed_dict = trainFeed)
-                self.tf_summary_writer.add_summary(s, epoch)
+                if summary:
+                    self.tf_train_writer.add_summary(s_train, epoch)
+                    self.tf_test_writer.add_summary(s_test, epoch)
 
         return self
 
