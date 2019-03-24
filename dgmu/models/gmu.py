@@ -11,7 +11,7 @@ from dgmu.core import Trainer, Layers, Score, Loss
 from dgmu.core import SupervisedModel
 from dgmu.core import utils
 
-class gmu(SupervisedModel):
+class GMU(SupervisedModel):
     """Biomodal GMU using Tensorflow"""
 
     def __init__(self, name = 'gmu', epochs = 1000, batch_size = 100,
@@ -19,7 +19,7 @@ class gmu(SupervisedModel):
                  hidden_dim = 500, input_dr = 0, optimizer = 'adam',
                  reg_type = 'l2', beta = 0, n_features = 500, save_step = 100):
         """Constructor"""
-        SupervisedModel.__init__(self, name)
+        SupervisedModel.__init__(self, name, n_features)
 
         self.epochs = epochs
         self.batch_size = batch_size
@@ -29,13 +29,13 @@ class gmu(SupervisedModel):
         self.input_dr = input_dr
         self.optimizer = optimizer
         self.reg_type = reg_type
-        self.beta = beta
-        self.n_features = n_features
-        self.save_step = save_sep
+        self.beta = np.float32(beta)
+        self.save_step = save_step
 
         self.loss = Loss(cost_func)
         self.trainer = Trainer(optimizer, lr)
 
+        #Model variables
         self.W_h1 = None
         self.b_h1 = None
         self.W_h2 = None
@@ -56,7 +56,7 @@ class gmu(SupervisedModel):
         #_g_unit() creates the variables
 
         g_unit = self._g_unit(self.mod1, self.mod2)
-        self.y, self.W_y, self.b_y = Layers.linear(g_unit, n_classes, name = 'output')
+        self.y, self.W_y, self.b_y = Layers.linear(g_unit, n_classes, act_func = 'linear', name = 'output')
 
         variables = [self.W_h1, self.b_h1, self.W_h2, self.b_h2]
         reg_term = Layers.regularize(variables, self.reg_type, self.beta)
@@ -64,25 +64,25 @@ class gmu(SupervisedModel):
         self.cost = self.loss.compute(self.y, self.y_, reg_term = reg_term)
         self.train_step = self.trainer.compile(self.cost)
 
-    def _create_placeholders(n_features, n_classes):
+        #Accuracy
+        self.accuracy = Score.accuracy(self.y, self.y_)
+
+    def _create_placeholders(self, n_features, n_classes):
         """Creates the tensorflow placeholders for the model"""
 
         self.mod1 = tf.placeholder(tf.float32, [None, n_features], name = 'mod1')
-        self.mod2 = tf.placeholder(tf.float32, [None, n_features], name = 'mod1')
+        self.mod2 = tf.placeholder(tf.float32, [None, n_features], name = 'mod2')
         self.y_ = tf.placeholder(tf.float32, [None, n_classes], name = 'y-label')
 
     def _g_unit(self, mod1, mod2):
 
         mod3 = tf.concat([mod1, mod2], 1)
 
-        h1, self.W_h1, self.b_h1 =  Layers.linear(x1, self.hidden_dim, self.input_dr, name = 'modality1')
-        h1 = Layers.activate(h1, 'relu')
+        h1, self.W_h1, self.b_h1 =  Layers.linear(mod1, self.hidden_dim, self.input_dr, name = 'modality1')
 
-        h2, self.W_h2, self.b_h2 = Layers.linear(x2, self.hidden_dim, self.input_dr, name = 'modality2')
-        h2 = Layers.activate(h2, 'relu')
+        h2, self.W_h2, self.b_h2 = Layers.linear(mod2, self.hidden_dim, self.input_dr, name = 'modality2')
 
-        z, self.W_z, self.b_z = Layers.linear(x3, self.hidden_dim, self.input_dr, name = 'modality3')
-        h2 = Layers.activate(h2, 'relu')
+        z, self.W_z, self.b_z = Layers.linear(mod3, self.hidden_dim, self.input_dr, name = 'modality3')
 
         h = tf.multiply(z, h1) + tf.multiply(tf.subtract(1.0, z), h2)
 
@@ -106,18 +106,27 @@ class gmu(SupervisedModel):
             if (epoch % self.save_step == 0) and (valX is not None):
 
                 #Split data by modality
-                mod1 = trainX[:,:self.n_features]
-                mod2 = trainX[:,self.n_features:]
+                trainMod1 = trainX[:,:self.n_features]
+                trainMod2 = trainX[:,self.n_features:]
+                valMod1 = valX[:,:self.n_features]
+                valMod2 = valX[:,self.n_features:]
+
+                #Generate feed dictionaries
+                trainFeed = {self.mod1:trainMod1, self.mod2:trainMod2, self.y_:trainY}
+                valFeed = {self.mod1:valMod1, self.mod2:valMod2, self.y_:valY}
 
                 #Compute cost
-                cost_feed = {self.mod1:mod1, self.mod2:mod2, self.y_:trainY}
-                cost = self.tf_session.run(self.cost, cost_feed)
+                cost = self.tf_session.run(self.cost, trainFeed)
 
                 #Compute classification agreement
-                train_agreement = None
-                test_agreement = None
+                #train_agreement = self.tf_session.run(self.accuracy, feed_dict = trainFeed)
+                #test_agreement = self.tf_session.run(self.accuracy, feed_dict = valFeed)
 
-                print('epoch : ', epoch, 'cost : ', cost)
+                #print('epoch : ', epoch, 'cost : ', cost, 'train acc. :', test_agreement)
+
+                #Add summary
+                s = self.tf_session.run(self.tf_merged_summaries, feed_dict = trainFeed)
+                self.tf_summary_writer.add_summary(s, epoch)
 
         return self
 
