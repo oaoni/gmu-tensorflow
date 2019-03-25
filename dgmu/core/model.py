@@ -11,7 +11,7 @@ from dgmu.core import Borg, Config
 class Model(object):
     """Generic abstract model in tensorflow"""
 
-    def __init__(self, name):
+    def __init__(self, name = 'gmu'):
         """Constructor
 
         :param name: string, name of the model and also the model filename
@@ -19,11 +19,11 @@ class Model(object):
         """
 
         self.name = name
-        self.model_path = os.path.join(Config().models_dir, self.name)
-
-        self.train_mod1 = None
-        self.train_mod2 = None
-        self.y_label = None
+        self.runid = Config()._run_identifier(Config().logs_dir)
+        self.model_path = os.path.join(Config().models_dir, 'run' + str(self.runid), self.name+'.ckpt')
+        self.logs_path = Config().logs_dir
+        self.mod1 = None
+        self.mod2 = None
         self.dropout_rate = None
         self.layer_nodes = []
         self.train_step = None
@@ -34,12 +34,15 @@ class Model(object):
         self.tf_session = None
         self.tf_saver = None
         self.tf_merged_summaries = None
-        self.tf_summary_writer = None
+        self.tf_train_writer = None
+        self.tf_test_writer = None
+
 
     def pretrain_procedure(self, layer_obj, layer_graphs, set_params_func,
                             train_mod1, train_mod2, validation_set = None):
         """Perform supervised pretraining of the representation network
 
+        #rename layer_obj to representation_obj / rep_obj
         :param layer_obj: layer model
         :param layer_graphs: list of model tf.Graph objects
         :param set_params_func: function for setting parameters after pretraining
@@ -54,7 +57,9 @@ class Model(object):
 
         layer_obj.fit(train_mod1, train_mod2, validation_set, graph = graph)
 
-        return None
+        train_encode = layer_obj.encode(train_mod1, train_mod2)
+
+        return train_encode
 
     def _pretrain_gated_unit_and_gen_feed():
         """Supervised pretraining of the gated multimodal unit"""
@@ -66,5 +71,9 @@ class Model(object):
         """Performs supervised finetuning on the combined representation and decision networks
 
         """
+
+        #with graph.as_default():
+
+            #Set the paramters of the representation network after pretraining
 
         return None
