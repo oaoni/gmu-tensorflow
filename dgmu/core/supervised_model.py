@@ -4,9 +4,11 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+import numpy as np
 import os
 
 from dgmu.core.model import Model
+from dgmu.core import Borg, Config
 from dgmu.core import utils
 
 class SupervisedModel(Model):
@@ -23,7 +25,6 @@ class SupervisedModel(Model):
 
         self.n_features = n_features
 
-
     def fit(self, trainX, trainY, valX = None, valY = None, graph = None, summary = True):
         """Fits the model to the training data
 
@@ -36,18 +37,66 @@ class SupervisedModel(Model):
         n_class = trainY.shape[1]
         g = graph if graph is not None else self.tf_graph
 
+        #Make model run_id directory
+        Config()._mkdir(os.path.join(Config().models_dir, 'run' + str(self.runid)))
+
         with g.as_default():
             #Build model
             self.build_model(self.n_features, n_class)
             with tf.Session() as self.tf_session:
                 #Initialize tf parameters
-                summary_objs = utils.init_tf_ops(self.tf_session)
+                summary_objs = utils.init_tf_ops(self.tf_session, summary)
                 self.tf_merged_summaries = summary_objs[0]
                 self.tf_train_writer = summary_objs[1]
                 self.tf_test_writer = summary_objs[2]
                 self.tf_saver = summary_objs[3]
                 #Train model
                 self._train_model(trainX, trainY, valX, valY, summary)
-                #Save model
+                if summary:
+                    print('Summaries added for training and test set.')
+                    print("run Tensorboard --logdir='%s' to see results." % os.path.join(Config().logs_dir, 'run' + str(self.runid)))
                 self.tf_saver.save(self.tf_session, self.model_path)
                 print('Model saved to: ', self.model_path)
+
+    def predict(self, testX, predict_proba = True, model_path = ''):
+        """Predicts the labels for a test set example
+
+        :param testX: Test data, array_like, shape (n_samples, n_features)
+        :param predict_proba: boolean, if True, returns the class probabilities of each test example
+        :param model_path: model path
+        :return y: Predicted labels, shape
+        """
+
+        if model_path:
+            self._restore_model(model_path)
+
+        with self.tf_graph.as_default():
+            with tf.Session() as self.tf_session:
+
+                self.tf_saver.restore(self.tf_session, self.model_path)
+                feed = {
+                    self.mod1: testX[:,:self.n_features],
+                    self.mod2: testX[:,self.n_features:]
+                }
+
+                if not predict_proba:
+                    return np.argmax(self.y.eval(feed), 1)
+                else:
+                    return self.y.eval(feed)
+
+    def _restore_model(self, model_path):
+        """Restores a supervised model from disk
+
+        :param model_path: string, model path, default None
+        """
+        self.model_path = model_path
+        self.tf_saver = tf.train.import_meta_graph(self.model_path + '.meta')
+        #self.tf_saver.restore(self.tf_session, model_path)
+        #self.tf_saver.restore(self.tf_session, tf.train.latest_checkpoint(os.path.dirname(model_path)))
+
+        self.tf_graph = tf.get_default_graph()
+        self.mod1 = self.tf_graph.get_tensor_by_name('mod1:0')
+        self.mod2 = self.tf_graph.get_tensor_by_name('mod2:0')
+        self.y = self.tf_graph.get_tensor_by_name('output/Add:0')
+
+        print('Model restored from: ', self.model_path)
