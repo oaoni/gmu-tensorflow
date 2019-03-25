@@ -72,7 +72,7 @@ class GMU(SupervisedModel):
 
         self.mod1 = tf.placeholder(tf.float32, [None, n_features], name = 'mod1')
         self.mod2 = tf.placeholder(tf.float32, [None, n_features], name = 'mod2')
-        self.y_ = tf.placeholder(tf.float32, [None, n_classes], name = 'y-label')
+        self.y_ = tf.placeholder(tf.float32, [None, n_classes], name = 'y_label')
 
     def _g_unit(self, mod1, mod2):
 
@@ -122,6 +122,7 @@ class GMU(SupervisedModel):
                 s_train, trainScore = self.tf_session.run([self.tf_merged_summaries, self.accuracy], feed_dict = trainFeed)
                 s_test, testScore = self.tf_session.run([self.tf_merged_summaries, self.accuracy], feed_dict = valFeed)
 
+                pbar.set_description("Cost: %.4e Train Acc: %.5f Test Acc: %.5f" % (cost, trainScore, testScore))
                 #print('epoch : ', epoch, 'cost : ', cost, 'train acc. :', trainScore, 'test acc. :', testScore)
 
                 #Add summary

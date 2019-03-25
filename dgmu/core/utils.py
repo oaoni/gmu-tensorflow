@@ -35,15 +35,15 @@ class Score(object):
         :param y: tf.Tensor Current label prediction
         :param y_: tf.Tensor True labels
         :param summary: bool, if True, saves tf summary for the operation
-        :return: returns the accuracy operation tensor
+        :return accuracy: returns the accuracy operation tensor
         """
 
         with tf.name_scope(name):
-            mod_pred = tf.argmax(mod_y, 1)
-            correct_pred = tf.equal(mod_pred, tf.argmax(ref_y, 1))
-            accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+            mod_pred = tf.argmax(y, 1)
+            correct_pred = tf.equal(mod_pred, tf.argmax(y_, 1))
+            accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32), name = 'accuracy_op')
             if summary:
-                tf.summary.scalar('accuracy', accuracy)
+                tf.summary.scalar(name, accuracy)
             return accuracy
 
 class Borg:
@@ -59,7 +59,7 @@ class Config(Borg):
     :param data_dir: string, name of the data folder, relative to self.root_dir
     :param logs_dir: string, name of the logs folder, relative to self.root_dir
     """
-    def __init__(self, models_dir='stored_models/', data_dir='sequence_data/', logs_dir='logs/'):
+    def __init__(self, models_dir='stored_models', data_dir='sequence_data', logs_dir='logs'):
         Borg.__init__(self)
 
         self.root_dir = os.getcwd()
@@ -98,7 +98,7 @@ class Config(Borg):
 
         return run_id
 
-def init_tf_ops(sess):
+def init_tf_ops(sess, summary):
     #Adapted from yadlt/utils/tf_utils.py
     """Initialize TensorFlow operations.
     This function initialize the following tensorflow ops:
@@ -127,6 +127,7 @@ def init_tf_ops(sess):
     run_dir = os.path.join(Config().logs_dir, 'run' + str(run_id))
     print('Tensorboard logs dir for this run is %s' % (run_dir))
 
-    summary_writer = tf.summary.FileWriter(run_dir, sess.graph)
+    train_writer = tf.summary.FileWriter(run_dir + '/train', sess.graph)
+    test_writer = tf.summary.FileWriter(run_dir + '/test')
 
-    return (summary_merged, summary_writer, saver)
+    return (summary_merged, train_writer, test_writer, saver)

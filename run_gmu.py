@@ -1,10 +1,14 @@
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import os
 
 from dgmu.models import gmu
 from dgmu.core import utils
 from dgmu.utils import datasets
+
+#Disables AVX compile warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # Define flags
 flags = tf.app.flags
@@ -17,6 +21,7 @@ flags.DEFINE_string('train_data_dir', '', 'Path to custom training set')
 flags.DEFINE_string('valid_data_dir', '', 'Path to custom validation set.')
 flags.DEFINE_string('test_data_dir', '', 'Path to custom test set.')
 flags.DEFINE_string('name', 'gmu', 'Model name.')
+flags.DEFINE_string('model_path', '', 'Model path to restore.')
 
 #GMU specific configurations
 flags.DEFINE_integer('epochs', 1000, 'Number of epochs.')
@@ -50,13 +55,6 @@ if __name__ == "__main__":
         print(X_test.shape)
         print(y_test.shape)
 
-        #Create model object
-        gmu = gmu.GMU(name=FLAGS.name, hidden_dim=FLAGS.hidden_dim, n_features=FLAGS.n_features,
-        save_step = FLAGS.save_step)
-        print('Object model path is: ', gmu.model_path)
-        #Fit the model
-        gmu.fit(X_train, y_train, X_test, y_test, summary = FLAGS.summary)
-
     if FLAGS.dataset == 'custom':
 
         def load_custom(custom_data_dir, delimiter = ','):
@@ -69,12 +67,19 @@ if __name__ == "__main__":
         X_val = load_custom(FLAGS.valid_data_dir, delimiter=',')
         X_train = load_custom(FLAGS.test_data_dir, delimiter=',')
 
-    print("So far so good!")
-
-    #Create the dgmu object
-    #gmu_model = gmu.GMU(
-    #name=FLAGS.name, ...
-    #)
+    #Create model object
+    gmu = gmu.GMU(name=FLAGS.name, hidden_dim=FLAGS.hidden_dim, n_features=FLAGS.n_features,
+    save_step = FLAGS.save_step)
 
     #Fit the model
-    #gmu.fit(X_train, y_train, X_test, y_test)
+    #gmu.fit(X_train, y_train, X_test, y_test, summary = FLAGS.summary)
+
+    #Predict
+    pred = gmu.predict(X_test, predict_proba=False, model_path = FLAGS.model_path)
+    print(pred)
+
+    #Score
+    score = gmu.score(X_test, y_test, model_path = FLAGS.model_path)
+    print(score)
+
+    print("So far so good!")

@@ -8,7 +8,7 @@ import numpy as np
 import os
 
 from dgmu.core.model import Model
-from dgmu.core import Borg, Config
+from dgmu.core import Borg, Config, Score, utils
 from dgmu.core import utils
 
 class SupervisedModel(Model):
@@ -24,6 +24,9 @@ class SupervisedModel(Model):
         Model.__init__(self, name)
 
         self.n_features = n_features
+
+        self.y_ = None
+        self.accuracy = None
 
     def fit(self, trainX, trainY, valX = None, valY = None, graph = None, summary = True):
         """Fits the model to the training data
@@ -84,6 +87,30 @@ class SupervisedModel(Model):
                 else:
                     return self.y.eval(feed)
 
+    def score(self, testX, testY, model_path = ''):
+        """Computes model score (mean accuracy)
+
+        :param testX: Test data, array_like, shape (n_samples, n_features)
+        :param testY: Test labels, array_like,shape (n_samples, n_features)
+        :param model_path: string, model path, default ''
+        :return accuracy: mean accuracy
+        """
+
+        if model_path:
+            self._restore_model(model_path)
+
+        with self.tf_graph.as_default():
+            with tf.Session() as self.tf_session:
+
+                self.tf_saver.restore(self.tf_session, self.model_path)
+                feed = {
+                self.mod1: testX[:,:self.n_features],
+                self.mod2: testX[:,self.n_features:],
+                self.y_: testY
+                }
+
+                return self.accuracy.eval(feed)
+
     def _restore_model(self, model_path):
         """Restores a supervised model from disk
 
@@ -91,12 +118,12 @@ class SupervisedModel(Model):
         """
         self.model_path = model_path
         self.tf_saver = tf.train.import_meta_graph(self.model_path + '.meta')
-        #self.tf_saver.restore(self.tf_session, model_path)
-        #self.tf_saver.restore(self.tf_session, tf.train.latest_checkpoint(os.path.dirname(model_path)))
 
         self.tf_graph = tf.get_default_graph()
         self.mod1 = self.tf_graph.get_tensor_by_name('mod1:0')
         self.mod2 = self.tf_graph.get_tensor_by_name('mod2:0')
         self.y = self.tf_graph.get_tensor_by_name('output/Add:0')
+        self.y_ = self.tf_graph.get_tensor_by_name('y_label:0')
+        self.accuracy = self.tf_graph.get_tensor_by_name('accuracy/accuracy_op:0')
 
         print('Model restored from: ', self.model_path)
