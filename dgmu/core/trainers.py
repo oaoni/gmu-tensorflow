@@ -17,15 +17,15 @@ class Trainer(object):
         if optimizer == 'adam':
             self.optimizer_ = tf.train.AdamOptimizer(lr)
 
-        def compile(self, loss, name_scope = 'train'):
-            """"Compile the optimizer
+    def compile(self, loss, name_scope = 'train'):
+        """"Compile the optimizer
 
-            :param loss: Tensor containing value to minimize
-            :param name_scope: string, Name of scope for the optimizer grapher ops
-            """
+        :param loss: Tensor containing value to minimize
+        :param name_scope: string, Name of scope for the optimizer grapher ops
+        """
 
-            with tf.name_scope(name_scope):
-                return self.optimizer_.minimize(loss)
+        with tf.name_scope(name_scope):
+            return self.optimizer_.minimize(loss)
 
 
 class Loss(object):
@@ -54,17 +54,19 @@ class Loss(object):
         :return loss: tf.Tensor, loss function tensor
         """
 
-        with tf.name_scope(self.name):
-            if self.cost_function == 'softmax_cross_entropy':
-                loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits = y, labels = y_)
-            elif self.cost_function == 'softmax_cross_entropy_reduce':
-                loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits = y, labels = y_))
-            else:
-                loss = None
+
+        if self.cost_function == 'softmax_cross_entropy':
+            with tf.name_scope(self.cost_function):
+                cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits = y, labels = y_))
+        else:
+            cost = None
 
         if cost is not None:
             loss = (cost + reg_term) if reg_term is not None else (cost)
         else:
             loss = None
+
+        if self.summary:
+            tf.summary.scalar(self.cost_function, loss)
 
         return loss
