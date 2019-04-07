@@ -85,7 +85,7 @@ class SupervisedModel(Model):
                 if not predict_proba:
                     return np.argmax(self.y.eval(feed), 1)
                 else:
-                    return self.y.eval(feed)
+                    return utils.softmax(self.y.eval(feed),axis=1)
 
     def score(self, testX, testY, model_path = ''):
         """Computes model score (mean accuracy)
