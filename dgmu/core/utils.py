@@ -25,6 +25,20 @@ def get_batch(X1, X2, Y_, size):
 
     return X1[a], X2[a], Y_[a]
 
+def softmax(x, axis = 1, keepdims = True):
+    """Transforms input by applying softmax function
+
+    :param x: Input array, array_like, (n_predictions, n_classes)
+    :param axis: Axis to compute softmax
+    :return s: Array that sums to 1 along the defined axis, array has shape of x
+    """
+    x = x - np.expand_dims(np.max(x, axis = axis), axis)
+    x = np.exp(x)
+    ax_sum = np.expand_dims(np.sum(x, axis = axis), axis)
+    s = x / ax_sum
+
+    return s
+
 class Score(object):
     """Classification scoring methods"""
 
