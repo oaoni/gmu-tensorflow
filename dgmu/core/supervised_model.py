@@ -61,7 +61,7 @@ class SupervisedModel(Model):
                 self.tf_saver.save(self.tf_session, self.model_path)
                 print('Model saved to: ', self.model_path)
 
-    def predict(self, testX, predict_proba = True, model_path = ''):
+    def predict(self, testX, predict_proba = True, model_path = '', mode = ''):
         """Predicts the labels for a test set example
 
         :param testX: Test data, array_like, shape (n_samples, n_features)
@@ -77,17 +77,23 @@ class SupervisedModel(Model):
             with tf.Session() as self.tf_session:
 
                 self.tf_saver.restore(self.tf_session, self.model_path)
-                feed = {
-                    self.mod1: testX[:,:self.n_features],
-                    self.mod2: testX[:,self.n_features:]
-                }
+
+                if mode == 'unimodal':
+                    feed = {
+                        self.X:testX
+                    }
+                else:
+                    feed = {
+                        self.mod1: testX[:,:self.n_features],
+                        self.mod2: testX[:,self.n_features:],
+                    }
 
                 if not predict_proba:
                     return np.argmax(self.y.eval(feed), 1)
                 else:
                     return utils.softmax(self.y.eval(feed),axis=1)
 
-    def score(self, testX, testY, model_path = ''):
+    def score(self, testX, testY, model_path = '', mode = ''):
         """Computes model score (mean accuracy)
 
         :param testX: Test data, array_like, shape (n_samples, n_features)
@@ -103,11 +109,17 @@ class SupervisedModel(Model):
             with tf.Session() as self.tf_session:
 
                 self.tf_saver.restore(self.tf_session, self.model_path)
-                feed = {
-                self.mod1: testX[:,:self.n_features],
-                self.mod2: testX[:,self.n_features:],
-                self.y_: testY
-                }
+                if mode == 'unimodal':
+                    feed = {
+                    self.X: testX,
+                    self.y_: testY
+                    }
+                else:
+                    feed = {
+                    self.mod1: testX[:,:self.n_features],
+                    self.mod2: testX[:,self.n_features:],
+                    self.y_: testY
+                    }
 
                 return self.accuracy.eval(feed)
 
